@@ -1,8 +1,8 @@
-Implementační dokumentace k 1. úloze do IPP 2019/2020
-Jméno a příjmení: Tomáš Beránek
-Login: xberan46
+Implementační dokumentace k 1. úloze do IPP 2019/2020  
+Jméno a příjmení: Tomáš Beránek  
+Login: xberan46  
 
-##Popis implementace parsovacího skriptu parse.php pro jazyk IPPcode20
+## Popis implementace parsovacího skriptu parse.php pro jazyk IPPcode20
 Implementace je založena na konečném stavovém řízení (rozlišování instrukcí) v
 kombinaci s regulárními výrazy (zejména pro lexikální analýzu). Skript není
 implementován objektově, vyjimkou je třída DOMDocument sloužící pro vytvoření
@@ -23,3 +23,11 @@ zajišťují lexikální analýzu jednotlivých typů operandů.
 
 Nápověda je realizována pomocí funkce `print_help`, která po zpracování
 vstupních parametrů skriptu vypíše při zadaní parametru `--help` daný text.
+
+## Rozšíření STATP
+Ve skriptu je implementováno rozšíření na sběr statistik. Statistiky jsou
+ukládány do pole `stats_values`. Hodnoty se ukládájí v průběhu zprácovávání
+instrukcí. Statistiky jsou sbírány ikdyž není zadán parametr `--stats=file`.
+Po přečtení celého vstupu se statistiky vypíší pouze pokud byl daný parametr
+zadán. Vypisují se do zadaného souboru a v pořadí, ve kterém byly jednotlivé
+parametry zadány.
