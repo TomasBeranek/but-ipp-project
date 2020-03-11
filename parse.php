@@ -46,7 +46,7 @@
       return true;
     else if (preg_match('/bool@(true|false)/', $s, $found) && $found[0] == $s) //bool constant
       return true;
-    else if (preg_match('/int@.*/', $s, $found) && $found[0] == $s) //int constant
+    else if (preg_match('/int@(\+|\-)?\d+/', $s, $found) && $found[0] == $s) //int constant
       return true;
     else if (preg_match('/string@([^\s\\\\#]|\\\\\d{3})*/', $s, $found) && $found[0] == $s) //string constant
       return true;
@@ -206,6 +206,7 @@
       //<var> <symb>
       case "MOVE":
       case "INT2CHAR":
+      case "NOT":
       case "STRLEN":
       case "TYPE":
         if ($words_cnt != 3 || !is_var($word[1]) || !is_symb($word[2]))
@@ -243,7 +244,6 @@
       case "EQ":
       case "AND":
       case "OR":
-      case "NOT":
       case "STRI2INT":
       case "CONCAT":
       case "GETCHAR":
@@ -356,6 +356,7 @@
   }
 
   /******* MAIN *******/
+  ini_set('display_errors', 'stderr');
 
   $stats_enabled = false;
   $stats_param_passed = false;
