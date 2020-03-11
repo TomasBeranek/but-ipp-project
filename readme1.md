@@ -2,7 +2,7 @@ Implementační dokumentace k 1. úloze do IPP 2019/2020
 Jméno a příjmení: Tomáš Beránek  
 Login: xberan46  
 
-#Popis implementace parsovacího skriptu parse.php pro jazyk IPPcode20
+## Popis implementace parsovacího skriptu parse.php pro jazyk IPPcode20
 Implementace je založena na konečném stavovém řízení (rozlišování instrukcí) v
 kombinaci s regulárními výrazy (zejména pro lexikální analýzu). Skript není
 implementován objektově, vyjimkou je třída DOMDocument sloužící pro vytvoření
