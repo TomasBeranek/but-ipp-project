@@ -319,7 +319,129 @@ function get_unique_file_name(){
     }
   }
   else { //parser and interpreter
-    // code...
+    foreach ($files as $file_src) {
+      //replace .src
+      $file_out = substr($file_src, 0, -4) . '.out';
+      $file_rc = substr($file_src, 0, -4) . '.rc';
+      $file_in = substr($file_src, 0, -4) . '.in';
+      $tmp = preg_split('/[^\/]*\.src/', $file_src); //get path from path/file.src
+      $curr_dir = $tmp[0];
+      if ($curr_dir == "")
+        $curr_dir = "./";
+      $out = ""; //clear variable
+      $rc_given = 0;
+
+      //create new record in $dir_status, if needed
+      if (!array_key_exists($curr_dir, $dir_status))
+        $dir_status[$curr_dir] = $pf;
+
+      //run parser.php on $file_src and output save to $out
+      //output cannot be saved directly, because problem with user rights will not be detectable
+      //also output cannot be redirected to diff, because we need to check RC of interpreter
+      $rc = 0;
+      $out = "";
+      exec('php7.4 ' . $params["parse_script"] . " < " . $file_src, $out, $rc);
+
+      //if file .out doesnt exist, create empty file
+      if (!file_exists($file_out)){
+        if (fopen($file_out, 'w') === FALSE)
+          exit(12);
+      }
+
+      //if file .in doesnt exist, create empty file
+      if (!file_exists($file_in)){
+        if (fopen($file_in, 'w') === FALSE)
+          exit(12);
+      }
+
+      //if .rc file doesnt exist, create it with 0 value
+      if (!file_exists($file_rc)) {
+        if (!file_put_contents($file_rc, '0'))
+          exit(12);
+      } else {
+        if (($rc_given = file_get_contents($file_rc)) === FALSE)
+          exit(11);
+
+        //convert rc from string to int with check
+        $tmp = intval($rc_given);
+        if ($tmp != $rc_given)
+          exit(11); //invalid value in file.rc
+        $rc_given = $tmp;
+      }
+
+      //testing return code
+      if (($rc_given != $rc) && ($rc >= 21) && ($rc <= 23)){
+        $file_status[$file_src] = "FAILED in parser.php - Expected RC=" . $rc_given . " got " . $rc;
+        $dir_status[$curr_dir]["FAILED"]++;
+        continue; //skip to next file
+      }
+      elseif ($rc != 0) {
+        $file_status[$file_src] = "SUCCESSFULL";
+        $dir_status[$curr_dir]["PASSED"]++;
+        continue; //skip to next file
+      }
+
+      //save parser output to temporary file wih unique name, file is created in same directory as test.php
+      $tmp_file = get_unique_file_name();
+      if (!file_put_contents($tmp_file, $out))
+        exit(12);
+
+      //test parser ouput with interpret
+      //run interpret.py on $tmp_file with $file_in and output save to $out
+      //output cannot be saved directly, because problem with user rights will not be detectable
+      $rc = 0;
+      $out_int = "";
+      $out_int = get_unique_file_name();
+      exec('python3.8 ' . $params["int_script"] . " --input=" . $file_in . " < " . $tmp_file . " > " . $out_int, $tmp_int, $rc);
+      //passthru('python3.8 ' . $params["int_script"] . " --input=" . $file_in . " < " . $tmp_file, $out_int);
+
+      //parser output can be deleted now
+      exec('rm -f ' . $tmp_file);
+
+      //test RC of interpret
+      if (($rc_given = file_get_contents($file_rc)) === FALSE)
+        exit(11);
+      //convert rc from string to int with check
+      $tmp = intval($rc_given);
+      if ($tmp != $rc_given)
+        exit(11); //invalid value in file.rc
+      $rc_given = $tmp;
+
+      //testing return code
+      if ($rc_given != $rc){
+        $file_status[$file_src] = "FAILED in interpret.py - Expected RC=" . $rc_given . " got " . $rc;
+        $dir_status[$curr_dir]["FAILED"]++;
+        exec('rm -f ' . $out_int);
+        continue; //skip to next file
+      }
+      elseif ($rc != 0) {
+        $file_status[$file_src] = "SUCCESSFULL";
+        $dir_status[$curr_dir]["PASSED"]++;
+        exec('rm -f ' . $out_int);
+        continue; //skip to next file
+      }
+
+  /*    //save interpret output to temporary file wih unique name, file is created in same directory as test.php
+      $tmp_file = "";
+      $tmp_file = get_unique_file_name();
+
+      if (!file_put_contents($tmp_file, $out_int))
+        exit(12); */
+
+      //test outputs with diff
+      $rc_diff = 0;
+      exec('diff ' . $out_int . " " . $file_out, $out_diff, $rc_diff);
+      if ($rc_diff != 0){
+        $file_status[$file_src] = "FAILED in interpret.py - interpret outputs are different";
+        $dir_status[$curr_dir]["FAILED"]++;
+      }
+      else{
+        $file_status[$file_src] = "SUCCESSFULL";
+        $dir_status[$curr_dir]["PASSED"]++;
+      }
+
+      exec('rm -f ' . $out_int);
+    }
   }
 
 
