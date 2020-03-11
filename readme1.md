@@ -23,3 +23,11 @@ zajišťují lexikální analýzu jednotlivých typů operandů.
 
 Nápověda je realizována pomocí funkce `print_help`, která po zpracování
 vstupních parametrů skriptu vypíše při zadaní parametru `--help` daný text.
+
+## Rozšíření STATP
+Ve skriptu je implementováno rozšíření na sběr statistik. Statistiky jsou
+ukládány do pole `stats_values`. Hodnoty se ukládájí v průběhu zprácovávání
+instrukcí. Statistiky jsou sbírány ikdyž není zadán parametr `--stats=file`.
+Po přečtení celého vstupu se statistiky vypíší pouze pokud byl daný parametr
+zadán. Vypisují se do zadaného souboru a v pořadí, ve kterém byly jednotlivé
+parametry zadány.
