@@ -1,0 +1,8 @@
+[Fatal Error] 1.myout:1:575:Content is not allowed in trailing section.
+org.xml.sax.SAXParseException; systemId: file:///media/berry/ssd/berry/Dokumenty/ipp/1.myout; lineNumber: 1; columnNumber: 575; Content is not allowed in trailing section.
+	at java.xml/com.sun.org.apache.xerces.internal.parsers.AbstractSAXParser.parse(AbstractSAXParser.java:1243)
+	at java.xml/com.sun.org.apache.xerces.internal.jaxp.SAXParserImpl$JAXPSAXParser.parse(SAXParserImpl.java:635)
+	at com.a7soft.examxml.ExamXMLHandler.loadXML(ExamXMLHandler.java:111)
+	at com.a7soft.examxml.ExamXML.loadXML(ExamXML.java:247)
+	at com.a7soft.examxml.ExamXML.compare(ExamXML.java:213)
+	at com.a7soft.examxml.ExamXML.main(ExamXML.java:383)
