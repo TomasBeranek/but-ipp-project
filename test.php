@@ -305,7 +305,7 @@ function get_unique_file_name(){
         exit(12);
 
       //test outputs with diff
-      exec('diff ' . $tmp_file . " " . $file_out, $out, $rc_diff);
+      exec('diff -Z' . $tmp_file . " " . $file_out, $out, $rc_diff);
       if ($rc_diff != 0){
         $file_status[$file_src] = "FAILED - interpret outputs are different";
         $dir_status[$curr_dir]["FAILED"]++;
@@ -392,6 +392,7 @@ function get_unique_file_name(){
       $rc = 0;
       $out_int = "";
       $out_int = get_unique_file_name();
+
       exec('python3.8 ' . $params["int_script"] . " --input=" . $file_in . " < " . $tmp_file . " > " . $out_int, $tmp_int, $rc);
       //passthru('python3.8 ' . $params["int_script"] . " --input=" . $file_in . " < " . $tmp_file, $out_int);
 

@@ -1,11 +1,32 @@
 #!/usr/bin/env python
+
+ # ******************************* interpret.py *****************************
+ #  Course: Principles of Programming languages (IPP) - FIT BUT
+ #  Project name: IPPcode20 code interpreter in Python
+ #  Author: Beranek Tomas (xberan46)
+ #  Date: 7.4.2020
+ # **************************************************************************
+
 import sys
 import xml.etree.ElementTree as ET
 import re
 from xml.sax import saxutils
 
 def print_help():
-    print("TODO: Napoveda pro skript")
+    help = """Interpret XML reprezentace kodu
+
+Program nacte XML reprezentaci programu a tento program s vyuzitim vstupu dle parametru přika-
+zové řádky interpretuje a generuje výstup.
+
+Parametry:
+    --help          -vypise tuto napovedu
+    --source=file   -soubor pro nacteni XML reprezentace
+    --input=file    -soubor pro nacteni vstupu pro samotnou interpretaci
+
+Alespon jeden z parametru (--source nebo --input) musi byt vzdy zadan. Pokud jeden z nich
+chybi, tak jsou odpovidajici data nacitana ze standardniho vstupu."""
+
+    print(help)
 
 # function for getting order from instuction element
 # function gets and converts order to int
@@ -217,6 +238,8 @@ def check_args(*args):
     if len(instruction) == len(args):
         arg_number = 1
         for arg in args:
+            if instruction[arg_number - 1].text == None:
+                instruction[arg_number - 1].text = ""
             if (is_int(instruction[arg_number - 1], arg_number) or
                 is_bool(instruction[arg_number - 1], arg_number) or
                 is_string(instruction[arg_number - 1], arg_number) or
@@ -250,16 +273,16 @@ def i_pushframe(instruction):
     global LF_stack, TF, TF_created
     check_args(instruction)
     if TF_created:
-        pass
+        LF_stack.append(TF.copy())
+        TF_created = False
     else:
         sys.exit(55)
-    LF_stack.append(TF)
-    TF_created = False
 
 def i_popframe(instruction):
     global LF_stack, TF, TF_created
     check_args(instruction)
     TF.clear()
+    TF_created = True
     try:
         TF = LF_stack.pop()
     except IndexError:
@@ -293,15 +316,19 @@ def i_call(instruction):
     global instruction_cnt, instruction_cnt_stack
     check_args(instruction, 'label')
     instruction_cnt_stack.append(instruction_cnt + 1)
-    return label[instruction[0].text]
+    label_name = get_val(instruction[0])[1]
+    if label_name  in label:
+        return label[label_name]
+    else:
+        sys.exit(52)
 
 def i_return(instruction):
     global instruction_cnt_stack
     check_args(instruction)
-    if not instruction_cnt_stack:
-        sys.exit(56)  #empty stack
-    else:
+    if instruction_cnt_stack:
         return instruction_cnt_stack.pop()
+    else:
+        sys.exit(56)  #empty stack
 
 def i_pushs(instruction):
     global stack
@@ -311,7 +338,7 @@ def i_pushs(instruction):
 def i_pops(instruction):
     global stack
     check_args(instruction, 'var')
-    if not stack:
+    if stack:
         insert_value_to_var(instruction[0], stack.pop())
     else:
         sys.exit(56)
@@ -420,7 +447,7 @@ def i_int2char(instruction):
         except ValueError:
             sys.exit(58)
     else:
-        sys.exit(58)
+        sys.exit(53)
 
 def i_stri2int(instruction):
     check_args(instruction, 'var', 'symb', 'symb')
@@ -435,11 +462,32 @@ def i_stri2int(instruction):
         sys.exit(53)
 
 def i_read(instruction):
-    pass
+    global input_passed, input_list
+    check_args(instruction, 'var', 'type')
+    type = get_val(instruction[1])[1]
+    try:
+        if input_passed:
+            input_value = input_list.pop(0).replace("\n", "")
+        else:
+            input_value = str(input())
+
+        if type == 'int':
+            insert_value_to_var(instruction[0], ('int', int(input_value)))
+        elif type == 'string':
+            insert_value_to_var(instruction[0], ('string', input_value))
+        else: #bool
+            if input_value.upper() == 'TRUE':
+                insert_value_to_var(instruction[0], ('bool', True))
+            else:
+                insert_value_to_var(instruction[0], ('bool', False))
+    except (EOFError, ValueError):
+        insert_value_to_var(instruction[0], ('nil', 'nil'))
+    except IndexError:
+        insert_value_to_var(instruction[0], ('nil', 'nil'))
 
 def i_write(instruction):
     check_args(instruction, 'symb')
-    symb1 = get_val(instruction[1])
+    symb1 = get_val(instruction[0])
     if symb1[0] == 'bool':
         if symb1[1]:
             print('true', end='')
@@ -486,8 +534,8 @@ def i_setchar(instruction):
     symb2 = get_val(instruction[2])
     if var[0] == 'string' and symb1[0] == 'int' and symb2[0] == 'string':
         try:
-            var[1] = var[1][:symb1[1]] + symb2[1][0] + var[1][symb1[1] + 1:]
-            insert_value_to_var(instruction[0], ('string', var[1]))
+            var = var[1][:symb1[1]] + symb2[1][0] + var[1][symb1[1] + 1:]
+            insert_value_to_var(instruction[0], ('string', var))
         except IndexError:
             sys.exit(58)
     else:
@@ -502,16 +550,62 @@ def i_type(instruction):
         insert_value_to_var(instruction[0], ('string', ''))
 
 def i_label(instruction):
-    pass
+    global instruction_cnt, label
+    check_args(instruction, 'label')
+    label_name = get_val(instruction[0])[1]
+    if label_name in label and label[label_name] != instruction_cnt:
+        sys.exit(52) #redefinition
+    else:
+        label[label_name] = instruction_cnt
 
 def i_jump(instruction):
-    pass
+    global instruction_cnt, label
+    check_args(instruction, 'label')
+    label_name = get_val(instruction[0])[1]
+    if label_name  in label:
+        return label[label_name]
+    else:
+        sys.exit(52)
 
 def i_jumpifeq(instruction):
-    pass
+    global instruction_cnt, label
+    check_args(instruction, 'label', 'symb', 'symb')
+    label_name = get_val(instruction[0])[1]
+    symb1 = get_val(instruction[1])
+    symb2 = get_val(instruction[2])
+    if label_name in label:
+        if symb1[0] == symb2[0] and symb1[0] in ['int', 'bool', 'string', 'nil']:
+            if symb1[1] == symb2[1]:
+                return label[label_name]
+            else:
+                pass #do not jump
+        else:
+            if symb1[0] == 'nil' or symb2[0] == 'nil':
+                pass #do not jump
+            else:
+                sys.exit(53)
+    else:
+        sys.exit(52)
 
 def i_jumpifneq(instruction):
-    pass
+    global instruction_cnt, label
+    check_args(instruction, 'label', 'symb', 'symb')
+    label_name = get_val(instruction[0])[1]
+    symb1 = get_val(instruction[1])
+    symb2 = get_val(instruction[2])
+    if label_name in label:
+        if symb1[0] == symb2[0] and symb1[0] in ['int', 'bool', 'string', 'nil']:
+            if symb1[1] != symb2[1]:
+                return label[label_name]
+            else:
+                pass #do not jump
+        else:
+            if symb1[0] == 'nil' or symb2[0] == 'nil':
+                return label[label_name]
+            else:
+                sys.exit(53)
+    else:
+        sys.exit(52)
 
 def i_exit(instruction):
     check_args(instruction, 'symb')
@@ -530,9 +624,9 @@ def i_dprint(instruction):
     print(symb1[1], file=sys.stderr)
 
 def i_break(instruction):
-    global instruction_cnt, TF_created, TF, LF_stack
+    global instruction_cnt, TF_created, TF, LF_stack, label, stack
     check_args(instruction)
-    print('Pozice instrukce: ' + str(instruction_cnt), file=sys.stderr)
+    print('Pozice instrukce (cislovano od 0): ' + str(instruction_cnt), file=sys.stderr)
     print('TF vytvoren: ' + str(TF_created), file=sys.stderr)
     if TF_created:
         print('TF obsah:', file=sys.stderr)
@@ -542,7 +636,10 @@ def i_break(instruction):
     print('LF obsah (vrchol zasobniku je dole): ', file=sys.stderr)
     for frame in LF_stack:
         print(frame, file=sys.stderr)
-
+    print('Definovana navest a jejich radky (cislovano od 0):', file=sys.stderr)
+    print(label, file=sys.stderr)
+    print('Zasobnik (vrchol je vpravo):', file=sys.stderr)
+    print(stack, file=sys.stderr)
 
 def process_instruction(instruction):
     instruction_switch = {
@@ -567,50 +664,54 @@ def process_instruction(instruction):
         'NOT':          i_not,
         'INT2CHAR':     i_int2char,
         'STRI2INT':     i_stri2int,
-        'READ':         i_read,                 #TODO
+        'READ':         i_read,
         'WRITE':        i_write,
         'CONCAT':       i_concat,
         'STRLEN':       i_strlen,
         'GETCHAR':      i_getchar,
         'SETCHAR':      i_setchar,
         'TYPE':         i_type,
-        'LABEL':        i_label,                #TODO
-        'JUMP':         i_jump,                 #TODO
-        'JUMPIFEQ':     i_jumpifeq,             #TODO
-        'JUMPIFNEQ':    i_jumpifneq,            #TODO
+        'LABEL':        i_label,
+        'JUMP':         i_jump,
+        'JUMPIFEQ':     i_jumpifeq,
+        'JUMPIFNEQ':    i_jumpifneq,
         'EXIT':         i_exit,
         'DPRINT':       i_dprint,
         'BREAK':        i_break
     }
     try:
         fun = instruction_switch[instruction.attrib['opcode'].upper()]
+        return fun(instruction) #if jump is required internal number of instruction to jump is returned
     except KeyError:
         sys.exit(32) #unknown opcode
-    except IndexError as rc:
-        sys.exit(int(rc))
-    return fun(instruction) #if jump is required internal number of instruction to jump is returned
+    except IndexError:
+        sys.exit(56)
 
 #missing parametr or forbidden combination 10
 #error when opening input file 11
 #error when openin output file 12
 
 ######################### MAIN #################################################
-source = sys.stdin
+source_file = sys.stdin
 source_passed = False
-input = sys.stdin
-input_passed = False
+input_file = sys.stdin
 sys.argv.pop(0)
+
+#global variables
+input_passed = False
+input_list = [] #list of inputs, when input is laoded from a file
 
 #arg parsing
 if 1 <= len(sys.argv) <= 3:
     for param in sys.argv:
         if param == "--help" and len(sys.argv) == 1:
             print_help()
+            sys.exit(10)
         elif param[:9] == "--source=" and not source_passed:
-            source = param[9:]
+            source_file = param[9:]
             source_passed = True
         elif param[:8] == "--input=" and not input_passed:
-            input = param[8:]
+            input_file = param[8:]
             input_passed = True
         else:
             sys.exit(10)
@@ -619,7 +720,10 @@ else:
 
 #load xml
 try:
-    tree = ET.parse(source)
+    if input_passed:
+        with open(input_file) as in_f:
+            input_list = in_f.readlines()
+    tree = ET.parse(source_file)
 except (IOError, OSError):
     sys.exit(11)
 except ET.ParseError:
@@ -642,22 +746,34 @@ instruction_cnt = 0         #internal instruction counter
 instruction_cnt_stack = []  #stack for saving instruction's internal order for return instructions
 label = {}                  #dictionary of labels and lines
 
-#print(is_label(program[0][0], 1))
+#load labels
+for i in program:
+    check_instruction_attributes(i)
+    if i.attrib['opcode'].upper() == 'LABEL':
+        i_label(i)
+    instruction_cnt = instruction_cnt + 1
 
-
+instruction_cnt = 0
 #loop over every instruction element
 while instruction_cnt < len(program):
     check_instruction_attributes(program[instruction_cnt])
     jump_to = process_instruction(program[instruction_cnt])
 
     #debug prints
-    print('Command: ' + program[instruction_cnt].attrib['opcode'])
+    '''print('Command: ' + program[instruction_cnt].attrib['opcode'] + program[instruction_cnt].attrib['order'])
+    print('GF', end='')
     print(GF)
+    print('TF', end='')
     print(TF)
+    print('LF', end='')
     print(LF_stack)
+    print('STACK', end='')
+    print(stack)
+    print('Labels')
+    print(label)'''
 
     instruction_cnt = instruction_cnt + 1
     if jump_to != None:
         instruction_cnt = jump_to
 
-tree.write('output.xml')
+ # end of file interpret.py
