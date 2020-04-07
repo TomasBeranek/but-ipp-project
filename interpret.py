@@ -706,7 +706,7 @@ if 1 <= len(sys.argv) <= 3:
     for param in sys.argv:
         if param == "--help" and len(sys.argv) == 1:
             print_help()
-            sys.exit(10)
+            sys.exit(0)
         elif param[:9] == "--source=" and not source_passed:
             source_file = param[9:]
             source_passed = True
