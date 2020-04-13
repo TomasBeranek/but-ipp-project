@@ -12,6 +12,8 @@ import xml.etree.ElementTree as ET
 import re
 from xml.sax import saxutils
 
+# Desciption:
+#   function prints help on stdout
 def print_help():
     help = """Interpret XML reprezentace kodu
 
@@ -28,9 +30,14 @@ chybi, tak jsou odpovidajici data nacitana ze standardniho vstupu."""
 
     print(help)
 
-# function for getting order from instuction element
-# function gets and converts order to int
-# function is used for sorting instruction elements by order attribute
+# Desciption:
+#   function for getting a order value from an insruction element
+# Return value:
+#   value of an order attribute converted to int
+# Preconditions:
+#   instr_elem must be an ET XML element
+#   global varibales must exist and have correct types:
+#       order_dict - dictionary
 def get_order_attr(instr_elem):
     global order_dict
     try:
@@ -44,11 +51,19 @@ def get_order_attr(instr_elem):
     else:
         sys.exit(32) #order was negative/zero or already exists
 
+# Desciption:
+#   function for sorting insruction elements in program element
+# Preconditions:
+#   program must be an ET XML element
 def sort_instructions(program):
     program[:] = sorted(program, key=get_order_attr)
 
+# Desciption:
+#   function checks that the program element has correct format
+# Preconditions:
+#   program must be an ET XML element
 def check_program_atrributes(program):
-    #required attribute
+    #required attribute 'language'
     if ('language' in program.attrib) and program.attrib['language']=='IPPcode20':
         #optional attributes 'name' and 'description'
         if ((len(program.attrib) == 1) or
@@ -60,6 +75,10 @@ def check_program_atrributes(program):
     else:
         sys.exit(32)
 
+# Desciption:
+#   function checks that the instruction element has correct format
+# Preconditions:
+#   instruction must be an ET XML element
 def check_instruction_attributes(instruction):
     if ((len(instruction.attrib) == 2) and (instruction.tag == 'instruction') and
         ('order' in instruction.attrib) and ('opcode' in instruction.attrib)):
@@ -67,13 +86,24 @@ def check_instruction_attributes(instruction):
     else:
         sys.exit(32)
 
+# Desciption:
+#   function converts the string from a XML format in a IPPcode20 language
+#   XML escape sequencies are converted
+#   IPPcode20 escape sequencies are converted
+# Return value:
+#   converted string
 def convert_ippcode_str(str):
-    str = saxutils.unescape(str)
-    ippcode_escape_seq = re.findall(r'\\\d\d\d', str)
-    for seq in ippcode_escape_seq:
+    str = saxutils.unescape(str) #convert XML escape chars
+    ippcode_escape_seq = re.findall(r'\\\d\d\d', str) #find IPPcode20 escape chars
+    for seq in ippcode_escape_seq: #convert every found escape sequence
         str = str.replace(seq, chr(int(seq[1:4])))
     return str
 
+# Desciption:
+#   function checks that the argN element has correct format
+# Preconditions:
+#   arg must be an ET XML element
+#   arg_number must contain type which can be converted to str
 def check_arg_attributes(arg, arg_number):
     if (arg.tag == ('arg'+str(arg_number)) and len(arg.attrib) == 1 and
         ('type' in arg.attrib) and len(arg) == 0 and
@@ -82,6 +112,16 @@ def check_arg_attributes(arg, arg_number):
     else:
         sys.exit(32)
 
+# This description apllies to is_* functions
+# Description:
+#   function is_* checks that argN has a valid value specified in arg.attrib['type']
+#   * = (var, label, nil, bool, int, string, type, symb)
+# Return value
+#   True - if value is valid
+#   False - if value is not valid or arg.attrit['type'] contains a different type
+# Preconditions:
+#   arg must be an ET XML element and must have valid attributes
+#   arg_number must contain type which can be converted to str
 def is_var(arg, arg_number):
     check_arg_attributes(arg, arg_number)
     if arg.attrib['type'] == 'var':
@@ -160,7 +200,20 @@ def is_symb(arg, arg_number):
     else:
         return False
 
-#argument must be valid
+# Description:
+#   function gets a value from an XML arg element, if arg is a variable function
+#   returns a value of specified variable if its initialized
+# Return value
+#   a tuple that contains:
+#       type of value
+#       value
+# Preconditions:
+#   arg must be an ET XML element and must have valid attributes and value
+#   global varibales must exist and have correct types:
+#       GF - dictionary
+#       TF - dictionary
+#       TF_create - bool
+#       LF_stack - list of dictionaries
 def get_val(arg):
     global GF, TF, TF_created, LF_stack
     if arg.attrib['type'] == 'int':
@@ -206,7 +259,18 @@ def get_val(arg):
             else:
                 sys.exit(54) #variable is not defined
 
-#value must be tuple and var must contain xml arg var
+# Description:
+#   function inserts a given value to a specified variable
+# Preconditions:
+#   var must be an ET XML arg element and must contain a variable
+#   value must be a tuple that contains:
+#       type of value
+#       value
+#   global varibales must exist and have correct types:
+#       GF - dictionary
+#       TF - dictionary
+#       TF_create - bool
+#       LF_stack - list of dictionaries
 def insert_value_to_var(var, value):
     global GF, TF, TF_created, LF_stack
     var = saxutils.unescape(var.text).split('@')
@@ -230,8 +294,12 @@ def insert_value_to_var(var, value):
         else:
             sys.exit(54) #variable is not defined
 
-#first arg must be XML instruction element and others strings containing one of:
-#   -nil, var, int, string, label, bool, type, symb is_
+# Description:
+#   function checks that the given instruction contains specified args
+# Preconditions:
+#   first argument must be an valid ET XML instruction element
+#   other optional arguments are strings containing on of:
+#       -nil, var, int, string, label, bool, type, symb
 def check_args(*args):
     instruction = args[0]
     args = args[1:]
@@ -258,7 +326,11 @@ def check_args(*args):
 
 
 ############ INSTRUCTIONS ######################################################
-
+# Decription:
+#   following i_* functions reresent instructions in IPPcode20 specified assignment
+# Return value:
+#   if function represents a jump instruction an int value, which represents
+#   number of instruction to jump, can be returned
 def i_move(instruction):
     check_args(instruction, 'var', 'symb')
     insert_value_to_var(instruction[0], get_val(instruction[1]))
@@ -860,6 +932,15 @@ def i_jumpifneqs(instruction):
     else:
         sys.exit(52)
 
+# Description:
+#   function works as a switch, which calls functions for individual instructions
+# Return value:
+#   if a called function represents a jump instruction an int value, which represents
+#   the number of instruction to jump, can be returned
+# Preconditions:
+#   instruction must be an ET XML element
+#   global varibales must exist and have correct types:
+#       stats - dictionary with 'insts' key
 def process_instruction(instruction):
     global stats
     instruction_switch = {
@@ -898,7 +979,7 @@ def process_instruction(instruction):
         'EXIT':         i_exit,
         'DPRINT':       i_dprint,
         'BREAK':        i_break,
-
+#STACK extension
         'CLEARS':       i_clears,
         'ADDS':          i_adds,
         'SUBS':          i_subs,
@@ -924,6 +1005,16 @@ def process_instruction(instruction):
     except IndexError:
         sys.exit(56)
 
+# Description:
+#   function counts a actual number of a initialized variable in all frames
+#   if the count is bigger than stats['vars'], then stats['vars'] is updated
+# Preconditions:
+#   global varibales must exist and have correct types:
+#       GF - dictionary
+#       TF - dictionary
+#       TF_create - bool
+#       LF_stack - list of dictionaries
+#       stats - dictionary with 'vars' key
 def check_vars_count():
     global GF, TF, TF_created, LF_stack, stats
     tmp = 0
@@ -941,10 +1032,6 @@ def check_vars_count():
     if tmp > stats['vars']:
         stats['vars'] = tmp
 
-
-#missing parametr or forbidden combination 10
-#error when opening input file 11
-#error when opening output file 12
 
 ######################### MAIN #################################################
 source_file = sys.stdin
@@ -1032,20 +1119,6 @@ while instruction_cnt < len(program):
     check_instruction_attributes(program[instruction_cnt])
     jump_to = process_instruction(program[instruction_cnt])
     check_vars_count()
-
-    #debug prints
-    '''print('Command: ' + program[instruction_cnt].attrib['opcode'] + program[instruction_cnt].attrib['order'])
-    print('GF', end='')
-    print(GF)
-    print('TF', end='')
-    print(TF)
-    print('LF', end='')
-    print(LF_stack)
-    print('STACK', end='')
-    print(stack)
-    print('Labels')
-    print(label)'''
-
     instruction_cnt = instruction_cnt + 1
     if jump_to != None:
         instruction_cnt = jump_to
