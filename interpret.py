@@ -274,6 +274,7 @@ def i_pushframe(instruction):
     check_args(instruction)
     if TF_created:
         LF_stack.append(TF.copy())
+        TF.clear()
         TF_created = False
     else:
         sys.exit(55)
@@ -641,7 +642,226 @@ def i_break(instruction):
     print('Zasobnik (vrchol je vpravo):', file=sys.stderr)
     print(stack, file=sys.stderr)
 
+
+# STACK extension
+def i_clears(instruction):
+    global stack
+    stack.clear()
+
+def i_adds(instruction):
+    global stack
+    check_args(instruction, 'var')
+    try:
+        symb2 = stack.pop()
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if symb1[0] == 'int' and symb2[0] == 'int':
+        insert_value_to_var(instruction[0], ('int', symb1[1] + symb2[1]))
+    else:
+        sys.exit(53)
+
+def i_subs(instruction):
+    global stack
+    check_args(instruction, 'var')
+    try:
+        symb2 = stack.pop()
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if symb1[0] == 'int' and symb2[0] == 'int':
+        insert_value_to_var(instruction[0], ('int', symb1[1] - symb2[1]))
+    else:
+        sys.exit(53)
+
+def i_muls(instruction):
+    global stack
+    check_args(instruction, 'var')
+    try:
+        symb2 = stack.pop()
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if symb1[0] == 'int' and symb2[0] == 'int':
+        insert_value_to_var(instruction[0], ('int', symb1[1] * symb2[1]))
+    else:
+        sys.exit(53)
+
+def i_idivs(instruction):
+    global stack
+    check_args(instruction, 'var')
+    try:
+        symb2 = stack.pop()
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if symb1[0] == 'int' and symb2[0] == 'int':
+        if symb2[1] != 0:
+            insert_value_to_var(instruction[0], ('int', symb1[1] // symb2[1]))
+        else:
+            sys.exit(57)
+    else:
+        sys.exit(53)
+
+def i_lts(instruction):
+    global stack
+    check_args(instruction, 'var')
+    try:
+        symb2 = stack.pop()
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if symb1[0] == symb2[0] and symb1[0] in ['int', 'bool', 'string']:
+        insert_value_to_var(instruction[0], ('bool', symb1[1] < symb2[1]))
+    else:
+        sys.exit(53)
+
+def i_gts(instruction):
+    global stack
+    check_args(instruction, 'var')
+    try:
+        symb2 = stack.pop()
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if symb1[0] == symb2[0] and symb1[0] in ['int', 'bool', 'string']:
+        insert_value_to_var(instruction[0], ('bool', symb1[1] > symb2[1]))
+    else:
+        sys.exit(53)
+
+def i_eqs(instruction):
+    global stack
+    check_args(instruction, 'var')
+    try:
+        symb2 = stack.pop()
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if symb1[0] == symb2[0] and symb1[0] in ['int', 'bool', 'string', 'nil']:
+        insert_value_to_var(instruction[0], ('bool', symb1[1] == symb2[1]))
+    else:
+        if symb1[0] == 'nil' or symb2[0] == 'nil':
+            insert_value_to_var(instruction[0], ('bool', False))
+        else:
+            sys.exit(53)
+
+def i_ands(instruction):
+    global stack
+    check_args(instruction, 'var')
+    try:
+        symb2 = stack.pop()
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if symb1[0] == 'bool' and symb2[0] == 'bool':
+        insert_value_to_var(instruction[0], ('bool', symb1[1] and symb2[1]))
+    else:
+        sys.exit(53)
+
+def i_ors(instruction):
+    global stack
+    check_args(instruction, 'var')
+    try:
+        symb2 = stack.pop()
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if symb1[0] == 'bool' and symb2[0] == 'bool':
+        insert_value_to_var(instruction[0], ('bool', symb1[1] or symb2[1]))
+    else:
+        sys.exit(53)
+
+def i_nots(instruction):
+    global stack
+    check_args(instruction, 'var')
+    try:
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if symb1[0] == 'bool':
+        insert_value_to_var(instruction[0], ('bool', not symb1[1]))
+    else:
+        sys.exit(53)
+
+def i_int2chars(instruction):
+    global stack
+    check_args(instruction, 'var')
+    try:
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if symb1[0] == 'int':
+        try:
+            insert_value_to_var(instruction[0], ('string', chr(symb1[1])))
+        except ValueError:
+            sys.exit(58)
+    else:
+        sys.exit(53)
+
+def i_stri2ints(instruction):
+    global stack
+    check_args(instruction, 'var')
+    try:
+        symb2 = stack.pop()
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if symb1[0] == 'string' and symb2[0] == 'int':
+        try:
+            insert_value_to_var(instruction[0], ('int', ord(symb1[1][symb2[1]])))
+        except IndexError:
+            sys.exit(58)
+    else:
+        sys.exit(53)
+
+def i_jumpifeqs(instruction):
+    global instruction_cnt, label, stack
+    check_args(instruction, 'label')
+    label_name = get_val(instruction[0])[1]
+    try:
+        symb2 = stack.pop()
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if label_name in label:
+        if symb1[0] == symb2[0] and symb1[0] in ['int', 'bool', 'string', 'nil']:
+            if symb1[1] == symb2[1]:
+                return label[label_name]
+            else:
+                pass #do not jump
+        else:
+            if symb1[0] == 'nil' or symb2[0] == 'nil':
+                pass #do not jump
+            else:
+                sys.exit(53)
+    else:
+        sys.exit(52)
+
+def i_jumpifneqs(instruction):
+    global instruction_cnt, label, stack
+    check_args(instruction, 'label')
+    label_name = get_val(instruction[0])[1]
+    try:
+        symb2 = stack.pop()
+        symb1 = stack.pop()
+    except IndexError:
+        sys.exit(55)
+    if label_name in label:
+        if symb1[0] == symb2[0] and symb1[0] in ['int', 'bool', 'string', 'nil']:
+            if symb1[1] != symb2[1]:
+                return label[label_name]
+            else:
+                pass #do not jump
+        else:
+            if symb1[0] == 'nil' or symb2[0] == 'nil':
+                return label[label_name]
+            else:
+                sys.exit(53)
+    else:
+        sys.exit(52)
+
 def process_instruction(instruction):
+    global stats
     instruction_switch = {
         'MOVE':         i_move,
         'CREATEFRAME':  i_createframe,
@@ -677,19 +897,54 @@ def process_instruction(instruction):
         'JUMPIFNEQ':    i_jumpifneq,
         'EXIT':         i_exit,
         'DPRINT':       i_dprint,
-        'BREAK':        i_break
+        'BREAK':        i_break,
+
+        'CLEARS':       i_clears,
+        'ADDS':          i_adds,
+        'SUBS':          i_subs,
+        'MULS':          i_muls,
+        'IDIVS':         i_idivs,
+        'LTS':           i_lts,
+        'GTS':           i_gts,
+        'EQS':           i_eqs,
+        'ANDS':          i_ands,
+        'ORS':           i_ors,
+        'NOTS':          i_nots,
+        'INT2CHARS':     i_int2chars,
+        'STRI2INTS':     i_stri2ints,
+        'JUMPIFEQS':     i_jumpifeqs,
+        'JUMPIFNEQS':    i_jumpifneqs
     }
     try:
         fun = instruction_switch[instruction.attrib['opcode'].upper()]
+        stats['insts'] = stats['insts'] + 1 #increment instruction counter
         return fun(instruction) #if jump is required internal number of instruction to jump is returned
     except KeyError:
         sys.exit(32) #unknown opcode
     except IndexError:
         sys.exit(56)
 
+def check_vars_count():
+    global GF, TF, TF_created, LF_stack, stats
+    tmp = 0
+    for var in GF:
+        if GF[var][0] != None:
+            tmp = tmp + 1
+    for LF in LF_stack:
+        for var in LF:
+            if LF[var][0] != None:
+                tmp = tmp + 1
+    if TF_created:
+        for var in TF:
+            if TF[var][0] != None:
+                tmp = tmp + 1
+    if tmp > stats['vars']:
+        stats['vars'] = tmp
+
+
 #missing parametr or forbidden combination 10
 #error when opening input file 11
-#error when openin output file 12
+#error when opening output file 12
 
 ######################### MAIN #################################################
 source_file = sys.stdin
@@ -701,21 +956,39 @@ sys.argv.pop(0)
 input_passed = False
 input_list = [] #list of inputs, when input is laoded from a file
 
+stats_to_print = [] # a list of stats to print
+stats_print = False
+stats_file = ''
+stats = {
+    'insts':    0,
+    'vars':     0
+}
+
 #arg parsing
-if 1 <= len(sys.argv) <= 3:
-    for param in sys.argv:
-        if param == "--help" and len(sys.argv) == 1:
-            print_help()
-            sys.exit(0)
-        elif param[:9] == "--source=" and not source_passed:
-            source_file = param[9:]
-            source_passed = True
-        elif param[:8] == "--input=" and not input_passed:
-            input_file = param[8:]
-            input_passed = True
-        else:
-            sys.exit(10)
-else:
+for param in sys.argv:
+    if param == "--help" and len(sys.argv) == 1:
+        print_help()
+        sys.exit(0)
+    elif param[:9] == "--source=" and not source_passed:
+        source_file = param[9:]
+        source_passed = True
+    elif param[:8] == "--input=" and not input_passed:
+        input_file = param[8:]
+        input_passed = True
+    elif param[:8] == "--stats=" and not stats_print:
+        stats_print = True
+        stats_file = param[8:]
+    elif param in ['--insts', '--vars']:
+        stats_to_print.append(param)
+    else:
+        sys.exit(10)
+
+#input or source arg must be passed
+if not source_passed and not input_passed:
+    sys.exit(10)
+
+#if --vars or --insts was passed without --stats
+if stats_to_print and not stats_print:
     sys.exit(10)
 
 #load xml
@@ -758,6 +1031,7 @@ instruction_cnt = 0
 while instruction_cnt < len(program):
     check_instruction_attributes(program[instruction_cnt])
     jump_to = process_instruction(program[instruction_cnt])
+    check_vars_count()
 
     #debug prints
     '''print('Command: ' + program[instruction_cnt].attrib['opcode'] + program[instruction_cnt].attrib['order'])
@@ -775,5 +1049,17 @@ while instruction_cnt < len(program):
     instruction_cnt = instruction_cnt + 1
     if jump_to != None:
         instruction_cnt = jump_to
+
+#printing statistics
+try:
+    if stats_print:
+        with open(stats_file, 'w') as f:
+            for stat in stats_to_print:
+                if stat == '--insts':
+                    print(stats['insts'], file=f)
+                else:
+                    print(stats['vars'], file=f)
+except (IOError, OSError):
+    sys.exit(12)
 
  # end of file interpret.py
